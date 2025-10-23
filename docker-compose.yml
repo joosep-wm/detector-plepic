@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16.2-alpine
+    container_name: devday2025_detector_postgres
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_DB=detector
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=GVA0wPDuA9S5f24x
+    ports:
+      - "5439:5432"
+    volumes:
+      - ~/docker_volumes/devday2025/detector-postgres/data:/var/lib/postgresql/data
+
+volumes:
+  postgres:
