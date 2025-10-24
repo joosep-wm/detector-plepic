@@ -1,11 +1,13 @@
 package ee.digit25.detector.domain.account.external;
 
 import ee.bitweb.core.retrofit.RetrofitRequestExecutor;
+import ee.digit25.detector.common.ApiRequestDeduplicator;
 import ee.digit25.detector.domain.account.external.api.AccountModel;
 import ee.digit25.detector.domain.account.external.api.AccountApi;
 import ee.digit25.detector.domain.account.external.api.AccountApiProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,11 +19,14 @@ public class AccountRequester {
 
     private final AccountApi api;
     private final AccountApiProperties properties;
+    private final ApiRequestDeduplicator deduplicator;
 
+    @Cacheable(value = "accounts", key = "#accountNumber")
     public AccountModel get(String accountNumber) {
-        log.info("Requesting account {}", accountNumber);
-
-        return RetrofitRequestExecutor.executeRaw(api.get(properties.getToken(), accountNumber));
+        return deduplicator.deduplicate("account:" + accountNumber, () -> {
+            log.info("Requesting account {}", accountNumber);
+            return RetrofitRequestExecutor.executeRaw(api.get(properties.getToken(), accountNumber));
+        });
     }
 
     public List<AccountModel> get(List<String> numbers) {

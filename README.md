@@ -12,7 +12,7 @@ Once you have  a team and a fork, you can register with the following CURL comma
 
 **DO NOT FORGET TO CHANGE TEAM NAME IN BODY**
 
-`curl -X POST 'https://devday.sandbox.bitw3b.eu/detectors' -H 'Content-Type: application/json' --data-raw '{"name": "<TEAM NAME>"}'`
+`curl -X POST 'https://devday.sandbox.bitw3b.eu/detectors' -H 'Content-Type: application/json' --data-raw '{"name": "Plepic"}'`
 
 As a response you will get token. Put that token into src/main/java/resources/application.properties
 
@@ -26,7 +26,7 @@ Detector database runs locally in Docker container
 ## Running
 
 * Running in IDE is best option
-* Running in terminal `./gradlew bootRun --args='--detector.token=<your_token>'`
+* Running in terminal `./gradlew bootRun --args='--detector.token=ajryQmxU5XwN7jXWWSl6i4Lvk3TVG98m'`
 
 ## Service limitations
 

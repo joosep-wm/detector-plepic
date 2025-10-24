@@ -6,6 +6,7 @@ import ee.digit25.detector.domain.person.PersonValidator;
 import ee.digit25.detector.domain.transaction.common.Transaction;
 import ee.digit25.detector.domain.transaction.external.api.TransactionModel;
 import ee.digit25.detector.domain.transaction.feature.FindTransactionsFeature;
+import ee.digit25.detector.process.ValidationContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,38 +23,37 @@ public class TransactionValidator {
     private final AccountValidator accountValidator;
     private final FindTransactionsFeature findTransactionsFeature;
 
-    public boolean isLegitimate(TransactionModel transaction) {
+    public boolean isLegitimate(TransactionModel transaction, ValidationContext context) {
+        LocalDateTime validationTime = LocalDateTime.now();
+
         boolean isLegitimate = true;
 
-        isLegitimate &= personValidator.isValid(transaction.getRecipient());
-        isLegitimate &= personValidator.isValid(transaction.getSender());
-        isLegitimate &= deviceValidator.isValid(transaction.getDeviceMac());
-        isLegitimate &= accountValidator.isValidSenderAccount(transaction.getSenderAccount(), transaction.getAmount(), transaction.getSender());
-        isLegitimate &= accountValidator.isValidRecipientAccount(transaction.getRecipientAccount(), transaction.getRecipient());
-        isLegitimate &= validateNoBurstTransaction(transaction);
-        isLegitimate &= validateNoMultideviceTransactions(transaction);
-        isLegitimate &= validateValidHistory(transaction);
+        isLegitimate &= personValidator.isValid(transaction.getRecipient(), context);
+        isLegitimate &= personValidator.isValid(transaction.getSender(), context);
+        isLegitimate &= deviceValidator.isValid(transaction.getDeviceMac(), context);
+        isLegitimate &= accountValidator.isValidSenderAccount(transaction.getSenderAccount(), transaction.getAmount(), transaction.getSender(), context);
+        isLegitimate &= accountValidator.isValidRecipientAccount(transaction.getRecipientAccount(), transaction.getRecipient(), context);
+        isLegitimate &= validateNoBurstTransaction(transaction, validationTime);
+        isLegitimate &= validateNoMultideviceTransactions(transaction, validationTime);
+        isLegitimate &= validateValidHistory(transaction, validationTime);
 
         return isLegitimate;
     }
 
-    private boolean validateNoBurstTransaction(TransactionModel transaction) {
-        LocalDateTime since = LocalDateTime.now().minusSeconds(30);
+    private boolean validateNoBurstTransaction(TransactionModel transaction, LocalDateTime validationTime) {
+        LocalDateTime since = validationTime.minusSeconds(30);
 
-        long transactionCountSince = findTransactionsFeature.bySender(transaction.getSender())
-                .stream()
-                .filter(t -> t.getTimestamp().isAfter(since))
-                .count();
+        long transactionCountSince = findTransactionsFeature.bySender(transaction.getSender(), since)
+                .size();
 
         return countBelowThreshold(transactionCountSince, 10);
     }
 
-    private boolean validateNoMultideviceTransactions(TransactionModel transaction) {
-        LocalDateTime since = LocalDateTime.now().minusSeconds(10);
+    private boolean validateNoMultideviceTransactions(TransactionModel transaction, LocalDateTime validationTime) {
+        LocalDateTime since = validationTime.minusSeconds(10);
 
-        long differentDeviceCountSince = findTransactionsFeature.bySender(transaction.getSender())
+        long differentDeviceCountSince = findTransactionsFeature.bySender(transaction.getSender(), since)
                 .stream()
-                .filter(t -> t.getTimestamp().isAfter(since))
                 .map(t -> t.getDevice().getMac())
                 .distinct()
                 .count();
@@ -61,12 +61,11 @@ public class TransactionValidator {
         return countBelowThreshold(differentDeviceCountSince, 2);
     }
 
-    private boolean validateValidHistory(TransactionModel transaction) {
-        LocalDateTime since = LocalDateTime.now().minusMinutes(1);
+    private boolean validateValidHistory(TransactionModel transaction, LocalDateTime validationTime) {
+        LocalDateTime since = validationTime.minusMinutes(1);
 
-        return findTransactionsFeature.bySender(transaction.getSender())
+        return findTransactionsFeature.bySender(transaction.getSender(), since)
                 .stream()
-                .filter(t -> t.getTimestamp().isAfter(since))
                 .allMatch(Transaction::isLegitimate);
     }
 
