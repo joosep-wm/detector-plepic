@@ -129,6 +129,94 @@ detector.token=your_token_here
 - Max 50 concurrent requests per API token
 - Max 10000 pending transactions per API token
 
+## Monitoring and Performance Metrics
+
+### Grafana Dashboard
+
+The competition provides a Grafana dashboard to monitor all teams' performance metrics:
+- **Dashboard URL**: https://dash.sandbox.bitw3b.eu/d/cejuv890k9wcgc/digit-2025-dashboard
+- **Credentials**: admin/admin
+- **Refresh Rate**: 5 seconds
+
+The dashboard tracks three key metrics per team:
+1. **Correctly Verified Transactions Rate** - Successfully processed transactions per minute
+2. **Incorrectly Verified Transactions Rate** - Bugs in validation logic (false positives/negatives)
+3. **Late Transactions Rate** - Transactions processed too slowly (performance issues)
+
+### Fetching Team-Specific Metrics
+
+To programmatically fetch metrics for a specific team (e.g., "Plepic"), use the Prometheus API through Grafana:
+
+#### 1. Get Incorrectly Verified Transactions (Bugs)
+```bash
+curl -u admin:admin -G 'https://dash.sandbox.bitw3b.eu/api/datasources/proxy/uid/cemc2ioh2i51cb/api/v1/query' \
+  --data-urlencode 'query=rate(transactions_miss_total{detector="Plepic"}[1m]) * 60' -s | jq .
+```
+
+#### 2. Get Correctly Verified Transactions (Success Rate)
+```bash
+curl -u admin:admin -G 'https://dash.sandbox.bitw3b.eu/api/datasources/proxy/uid/cemc2ioh2i51cb/api/v1/query' \
+  --data-urlencode 'query=rate(transactions_hit_total{detector="Plepic"}[1m]) * 60' -s | jq .
+```
+
+#### 3. Get Late Transactions (Performance Issues)
+```bash
+curl -u admin:admin -G 'https://dash.sandbox.bitw3b.eu/api/datasources/proxy/uid/cemc2ioh2i51cb/api/v1/query' \
+  --data-urlencode 'query=rate(transactions_late_total{detector="Plepic"}[1m]) * 60' -s | jq .
+```
+
+#### 4. Get All Teams' Metrics (for comparison)
+```bash
+# All teams - miss rate
+curl -u admin:admin -G 'https://dash.sandbox.bitw3b.eu/api/datasources/proxy/uid/cemc2ioh2i51cb/api/v1/query' \
+  --data-urlencode 'query=rate(transactions_miss_total[1m]) * 60' -s | jq .
+
+# All teams - hit rate
+curl -u admin:admin -G 'https://dash.sandbox.bitw3b.eu/api/datasources/proxy/uid/cemc2ioh2i51cb/api/v1/query' \
+  --data-urlencode 'query=rate(transactions_hit_total[1m]) * 60' -s | jq .
+
+# All teams - late rate
+curl -u admin:admin -G 'https://dash.sandbox.bitw3b.eu/api/datasources/proxy/uid/cemc2ioh2i51cb/api/v1/query' \
+  --data-urlencode 'query=rate(transactions_late_total[1m]) * 60' -s | jq .
+```
+
+#### Understanding the Results
+
+The API returns JSON with the current rate per minute. Example response:
+```json
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "detector": "Plepic",
+          "application": "transactions"
+        },
+        "value": [1761312440.023, "52.88135593220339"]
+      }
+    ]
+  }
+}
+```
+
+The second value in the `value` array is the rate (52.88 transactions/minute in this example).
+
+#### Key Metrics to Monitor
+
+- **Miss Rate**: Should be **0** - any value indicates bugs in validation logic
+- **Hit Rate**: Higher is better - indicates throughput and accuracy
+- **Late Rate**: Should be **0** - indicates performance bottlenecks if non-zero
+- **Success Ratio**: `hit_rate / (hit_rate + miss_rate)` - should be over 99%
+
+### Performance Optimization Tips
+
+If your team shows:
+- **High miss rate**: Review validation logic in `TransactionValidator`, `PersonValidator`, etc.
+- **High late rate**: Optimize API calls, add caching, increase concurrent requests
+- **Low hit rate**: Check for errors in logs, ensure all validation rules are implemented correctly
+
 ## Important Implementation Notes
 
 - The application uses async configuration (`AsyncConfig.java`) and scheduling (`SchedulingConfig.java`)

@@ -27,6 +27,33 @@ Detector database runs locally in Docker container
 
 * Running in IDE is best option
 * Running in terminal `./gradlew bootRun --args='--detector.token=ajryQmxU5XwN7jXWWSl6i4Lvk3TVG98m'`
+* Running with optimized JVM settings: `./start-optimized.sh [token]`
+
+### JVM Performance Tuning
+
+The application includes optimized JVM settings for high-throughput transaction processing:
+
+**Automatic (Recommended):**
+1. **Gradle**: JVM flags are automatically applied when using `./gradlew bootRun`
+2. **Shell Script**: Use `./start-optimized.sh` for standalone execution
+
+**Manual Configuration:**
+The JVM flags are configured in:
+- `build.gradle` - Automatically applied to `bootRun` task
+- `.mvn/jvm.config` - Maven-style configuration file
+- `start-optimized.sh` - Standalone startup script
+
+**Optimizations Applied:**
+- **G1GC**: Modern low-latency garbage collector with 200ms max pause time
+- **Heap**: 2GB min, 4GB max (adjust based on available memory)
+- **String Deduplication**: Reduces memory footprint for duplicate strings
+- **Performance Flags**: Pre-touch memory pages, disable explicit GC
+
+**For IDE Users:**
+Add these VM options to your run configuration:
+```
+-XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:G1HeapRegionSize=16m -Xms2g -Xmx4g -XX:+UseStringDeduplication -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -server
+```
 
 ## Service limitations
 

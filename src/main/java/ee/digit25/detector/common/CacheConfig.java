@@ -15,10 +15,18 @@ public class CacheConfig {
 
     @Bean
     public CacheManager cacheManager() {
-        CaffeineCacheManager cacheManager = new CaffeineCacheManager("persons", "accounts", "devices");
-        cacheManager.setCaffeine(Caffeine.newBuilder()
-                .expireAfterWrite(30, TimeUnit.SECONDS)
-                .maximumSize(10000));
+        CaffeineCacheManager cacheManager = new CaffeineCacheManager();
+        cacheManager.registerCustomCache("persons", buildCache(30, 10000));
+        cacheManager.registerCustomCache("accounts", buildCache(30, 10000));
+        cacheManager.registerCustomCache("devices", buildCache(30, 10000));
+        cacheManager.registerCustomCache("transactionHistory", buildCache(5, 5000));
         return cacheManager;
+    }
+
+    private com.github.benmanes.caffeine.cache.Cache<Object, Object> buildCache(int ttlSeconds, int maxSize) {
+        return Caffeine.newBuilder()
+                .expireAfterWrite(ttlSeconds, TimeUnit.SECONDS)
+                .maximumSize(maxSize)
+                .build();
     }
 }

@@ -72,3 +72,22 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+tasks.named('bootRun') {
+    jvmArgs = [
+        // Modern low-latency garbage collector
+        '-XX:+UseG1GC',
+        '-XX:MaxGCPauseMillis=200',
+        '-XX:G1HeapRegionSize=16m',
+
+        // Heap sizing (2GB min, 4GB max)
+        '-Xms2g',
+        '-Xmx4g',
+        '-XX:+UseStringDeduplication',
+
+        // Performance optimizations
+        '-XX:+DisableExplicitGC',
+        '-XX:+AlwaysPreTouch',
+        '-server'
+    ]
+}
